@@ -33,6 +33,8 @@ val DeviceType.drawable: DrawableResource
             DeviceType.OCTO -> Res.drawable.device_octo
             DeviceType.QUADRO -> Res.drawable.device_quadro
             DeviceType.D5_NEXT -> Res.drawable.device_d5_next
+            // TODO: placeholder until a dedicated High Flow Next illustration is added
+            DeviceType.HIGH_FLOW_NEXT -> Res.drawable.device_d5_next
         }
 
 @Composable

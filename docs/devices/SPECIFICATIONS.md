@@ -561,6 +561,8 @@ Total: 67 bytes (0x43)
 
 ## 7. Device Hardware Matrix & Offset Reference
 
+> **High Flow Next (`0xF012`)** is telemetry-only: no fan/pump/RGBpx channels, no virtual sensors. Status report offsets (from the Linux `aquacomputer_d5next` driver): flow `0x51` (dL/h), coolant temp `0x55`, external temp `0x57` (centi-°C). Water quality (`0x59`), power (`0x5B`), conductivity (`0x5F`) and 5V rails (`0x61`, `0x63`) are not yet exposed. The control report layout is undocumented, so configuration is unsupported.
+
 | Metric / Parameter                 |   Aquacomputer OCTO   |  Aquacomputer QUADRO  |   Aquacomputer D5 NEXT    |
 |------------------------------------|:---------------------:|:---------------------:|:-------------------------:|
 | **USB Product ID (PID)**           |       `0xF011`        |       `0xF00D`        |         `0xF00E`          |

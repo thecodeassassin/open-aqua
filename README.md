@@ -64,6 +64,7 @@ Inspect USB descriptors, firmware revisions, hardware serial numbers, and channe
 | **Aquacomputer OCTO** | `0xF011` | 8 Channels (PWM) | 4 Physical + 16 Virtual | Yes (Dedicated port, dL/h) | 2 Ports | 🟢 **Physically Verified & Tested** (Linux Bazzite & Emulated Windows) |
 | **Aquacomputer QUADRO** | `0xF00D` | 4 Channels (PWM) | 4 Physical + 16 Virtual | Yes (Dedicated port, dL/h) | 1 Port | 🟡 **Untested on physical device** |
 | **Aquacomputer D5 NEXT** | `0xF00E` | 2 (Pump + Fan) | 1 Liquid + 8 Virtual | Calculated / Virtual | 1 Port | 🟡 **Untested on physical device** |
+| **Aquacomputer High Flow Next** | `0xF012` | None | 2 (Coolant + External) | Yes (built-in, dL/h) | None | 🟡 **Telemetry only; untested on physical device** |
 
 *(All devices share USB Vendor ID `0x0C70`)*
 

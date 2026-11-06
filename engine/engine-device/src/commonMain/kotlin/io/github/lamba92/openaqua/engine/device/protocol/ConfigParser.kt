@@ -165,7 +165,7 @@ object ConfigParser {
         report: UByteArray,
         descriptor: DeviceDescriptor,
     ): List<SensorOffset> {
-        val baseOffset = descriptor.tempCtrlOffset ?: error("No tempCtrlOffset for ${descriptor.name}")
+        val baseOffset = descriptor.tempCtrlOffset ?: return emptyList()
         return descriptor.tempSensors.map { sensor ->
             SensorOffset(sensor.channel, parseSensorOffset(report, baseOffset, sensor.channel))
         }

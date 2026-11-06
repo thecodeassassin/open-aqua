@@ -7,6 +7,7 @@ enum class DeviceType {
     OCTO,
     QUADRO,
     D5_NEXT,
+    HIGH_FLOW_NEXT,
 }
 
 @Serializable
@@ -173,7 +174,45 @@ object DeviceRegistry {
             virtualSensorsStartOffset = 0x3F,
         )
 
-    val ALL = listOf(OCTO, QUADRO, D5_NEXT)
+    /**
+     * Flow/temperature sensor with no fan, pump or RGBpx channels. Offsets follow the Linux
+     * `aquacomputer_d5next` hwmon driver (flow @ 81, coolant temp @ 85, external temp @ 87).
+     * Telemetry only: the control report layout is not documented, so config is not supported.
+     */
+    val HIGH_FLOW_NEXT =
+        DeviceDescriptor(
+            type = DeviceType.HIGH_FLOW_NEXT,
+            name = "Aquacomputer High Flow Next",
+            productId = 0xF012,
+            ctrlReportLength = 0x65,
+            statusReportLength = 0x65,
+            tempSensors =
+                listOf(
+                    SensorDescriptor(
+                        channel = 0,
+                        hwmonIndex = 1,
+                        statusOffset = 0x55,
+                        kind = SensorChannelKind.INTEGRATED_COOLANT,
+                    ),
+                    SensorDescriptor(
+                        channel = 1,
+                        hwmonIndex = 2,
+                        statusOffset = 0x57,
+                        kind = SensorChannelKind.PHYSICAL_NTC,
+                    ),
+                ),
+            tempCtrlOffset = null,
+            firmwareVersionOffset = 0x0D,
+            hasFlowSensor = true,
+            flowSensorOffset = 0x51,
+            flowPulsesCtrlOffset = null,
+            hasDisplay = false,
+            hasRgbpx = false,
+            virtualSensorsCount = 0,
+            virtualSensorsStartOffset = null,
+        )
+
+    val ALL = listOf(OCTO, QUADRO, D5_NEXT, HIGH_FLOW_NEXT)
 
     fun findByProductId(productId: Int): DeviceDescriptor? = ALL.firstOrNull { it.productId == productId }
 

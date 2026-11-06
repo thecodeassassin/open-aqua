@@ -431,4 +431,34 @@ class ProtocolMappingTest {
             }
         assertTrue(ex.message?.contains("Verification failed on fan 0 minPower: expected 10.0%, read 20.0%") == true)
     }
+
+    @Test
+    fun testHighFlowNextRegistryAndTelemetry() {
+        val hfn = DeviceRegistry.HIGH_FLOW_NEXT
+        assertEquals(hfn, DeviceRegistry.findByProductId(0xF012))
+        assertTrue(hfn.fanChannels.isEmpty())
+
+        val report = UByteArray(hfn.statusReportLength)
+        // flow = 1234 dL/h @ 0x51, coolant = 31.25 C @ 0x55, external = 22.50 C @ 0x57
+        report[0x51] = 0x04u
+        report[0x52] = 0xD2u
+        report[0x55] = 0x0Cu
+        report[0x56] = 0x35u
+        report[0x57] = 0x08u
+        report[0x58] = 0xCAu
+
+        val telemetry =
+            StatusReportParser.parse(
+                DetectedHardwareDevice(
+                    id = DeviceId.from("test"),
+                    alias = DeviceAlias.from("test"),
+                    type = DeviceType.HIGH_FLOW_NEXT,
+                    name = hfn.name,
+                ),
+                report,
+            )
+        assertEquals(2, telemetry.sensors.size)
+        assertIs<io.github.lamba92.openaqua.model.FeatureState.Active<Int>>(telemetry.flowRateDlH)
+        assertEquals(1234, (telemetry.flowRateDlH as io.github.lamba92.openaqua.model.FeatureState.Active<Int>).value)
+    }
 }
