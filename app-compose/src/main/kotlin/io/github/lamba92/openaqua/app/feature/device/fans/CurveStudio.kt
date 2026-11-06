@@ -112,6 +112,7 @@ fun CurveStudio(
     onEvent: (CurveStudioEvent) -> Unit,
     modifier: Modifier = Modifier,
     hideDisconnectedSensors: Boolean = false,
+    waterSources: List<WaterSourceOption> = emptyList(),
 ) {
     val colors = OpenAquaTheme.colors
     val metrics = OpenAquaTheme.metrics
@@ -230,6 +231,8 @@ fun CurveStudio(
             is FanDraft.AutoCurve -> {
                 AutoCurveModeControls(
                     sensors = sensors,
+                    waterSources = waterSources,
+                    onSelectWaterSource = { onEvent(CurveStudioEvent.SelectWaterSource(it.deviceId, it.channel, it.name)) },
                     selectedSensorIndex = draft.sensorIndex,
                     onSelectSensor = { onEvent(CurveStudioEvent.ChangeSensorIndex(it)) },
                     tMin = draft.tMin,
@@ -251,6 +254,8 @@ fun CurveStudio(
             is FanDraft.TargetTemp -> {
                 TargetTempModeControls(
                     sensors = sensors,
+                    waterSources = waterSources,
+                    onSelectWaterSource = { onEvent(CurveStudioEvent.SelectWaterSource(it.deviceId, it.channel, it.name)) },
                     selectedSensorIndex = draft.sensorIndex,
                     onSelectSensor = { onEvent(CurveStudioEvent.ChangeSensorIndex(it)) },
                     targetTemp = draft.targetTempCelsius,
@@ -378,6 +383,8 @@ private fun AutoCurveModeControls(
     selectedSensorIndex: Int,
     onSelectSensor: (Int) -> Unit,
     onToggleHideSensors: () -> Unit,
+    waterSources: List<WaterSourceOption> = emptyList(),
+    onSelectWaterSource: (WaterSourceOption) -> Unit = {},
     tMin: Double,
     tMax: Double,
     pMin: Double,
@@ -421,6 +428,8 @@ private fun AutoCurveModeControls(
 
             SensorDropdown(
                 sensors = sensors,
+                waterSources = waterSources,
+                onSelectWaterSource = onSelectWaterSource,
                 selectedIndex = selectedSensorIndex,
                 onSelectSensor = onSelectSensor,
                 onToggleHideSensors = onToggleHideSensors,
@@ -518,6 +527,8 @@ private fun TargetTempModeControls(
     selectedSensorIndex: Int,
     onSelectSensor: (Int) -> Unit,
     onToggleHideSensors: () -> Unit,
+    waterSources: List<WaterSourceOption> = emptyList(),
+    onSelectWaterSource: (WaterSourceOption) -> Unit = {},
     targetTemp: Double,
     onTargetTempChange: (Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -579,6 +590,8 @@ private fun TargetTempModeControls(
 
             SensorDropdown(
                 sensors = sensors,
+                waterSources = waterSources,
+                onSelectWaterSource = onSelectWaterSource,
                 selectedIndex = selectedSensorIndex,
                 onSelectSensor = onSelectSensor,
                 onToggleHideSensors = onToggleHideSensors,
@@ -681,6 +694,8 @@ private fun SensorDropdown(
     selectedIndex: Int,
     onSelectSensor: (Int) -> Unit,
     onToggleHideSensors: () -> Unit,
+    waterSources: List<WaterSourceOption> = emptyList(),
+    onSelectWaterSource: (WaterSourceOption) -> Unit = {},
     modifier: Modifier = Modifier,
     hideDisconnectedSensors: Boolean = false,
 ) {
@@ -783,6 +798,22 @@ private fun SensorDropdown(
                         },
                         onClick = {
                             onSelectSensor(sensor.channel)
+                            expanded = false
+                        },
+                    )
+                }
+                waterSources.forEach { source ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Water: ${source.name} (%.1f°C)".format(source.liveTemp),
+                                color = colors.textPrimary,
+                                fontSize = 12.sp,
+                                fontFamily = OpenAquaTheme.typography.monospaceFontFamily,
+                            )
+                        },
+                        onClick = {
+                            onSelectWaterSource(source)
                             expanded = false
                         },
                     )

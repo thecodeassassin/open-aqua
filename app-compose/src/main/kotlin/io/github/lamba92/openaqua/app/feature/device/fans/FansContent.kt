@@ -194,6 +194,7 @@ fun FansContent(
                     draft = draft,
                     allFans = state.fans,
                     sensors = state.sensors,
+                    waterSources = state.waterSources,
                     isModified = isModified,
                     pendingFansCount = state.pendingFans.size,
                     hideDisconnectedSensors = state.hideDisconnectedSensors,
@@ -381,6 +382,7 @@ fun FanChannelDetailCard(
     modifier: Modifier = Modifier,
     hideDisconnectedSensors: Boolean = false,
     onRenameClick: (() -> Unit)? = null,
+    waterSources: List<WaterSourceOption> = emptyList(),
 ) {
     val colors = OpenAquaTheme.colors
     val metrics = OpenAquaTheme.metrics
@@ -488,6 +490,7 @@ fun FanChannelDetailCard(
             sensors = sensors,
             onEvent = onCurveStudioEvent,
             hideDisconnectedSensors = hideDisconnectedSensors,
+            waterSources = waterSources,
         )
 
         // Hardware Power Limits

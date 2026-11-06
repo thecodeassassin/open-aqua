@@ -6,6 +6,7 @@ import io.github.lamba92.openaqua.app.feature.device.common.SensorItem
 import io.github.lamba92.openaqua.model.device.AutoCurveFanConfig
 import io.github.lamba92.openaqua.model.device.CurveFanConfig
 import io.github.lamba92.openaqua.model.device.CurveMath
+import io.github.lamba92.openaqua.model.device.DeviceId
 import io.github.lamba92.openaqua.model.device.FanChannelConfig
 import io.github.lamba92.openaqua.model.device.FanLimits
 import io.github.lamba92.openaqua.model.device.FixedFanConfig
@@ -195,6 +196,14 @@ fun FanChannelConfig?.toInitialDraft(
         }
     }
 
+/** A water temperature (e.g. High Flow Next coolant) on another device that a fan curve can target. */
+data class WaterSourceOption(
+    val deviceId: DeviceId,
+    val channel: Int,
+    val name: String,
+    val liveTemp: Double,
+)
+
 sealed interface FansUiState {
     data object Loading : FansUiState
 
@@ -207,6 +216,7 @@ sealed interface FansUiState {
         val renamingChannel: Int? = null,
         val hideDisconnectedFans: Boolean = false,
         val hideDisconnectedSensors: Boolean = false,
+        val waterSources: List<WaterSourceOption> = emptyList(),
     ) : FansUiState {
         val renamingFan: FanItem?
             get() = renamingChannel?.let { ch -> fans.firstOrNull { it.channel == ch } }
@@ -264,6 +274,12 @@ sealed interface CurveStudioEvent : FansUiEvent {
 
     data class ChangeFixedPwm(
         val pwm: Double,
+    ) : CurveStudioEvent
+
+    data class SelectWaterSource(
+        val deviceId: DeviceId,
+        val channel: Int,
+        val name: String,
     ) : CurveStudioEvent
 
     data class ChangeSensorIndex(

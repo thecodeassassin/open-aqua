@@ -4,17 +4,23 @@ import io.github.lamba92.openaqua.app.coroutine.CoroutineScopeProvider
 import io.github.lamba92.openaqua.app.coroutine.LoggingScope
 import io.github.lamba92.openaqua.app.coroutine.getScope
 import io.github.lamba92.openaqua.app.coroutine.logger
+import io.github.lamba92.openaqua.app.feature.device.common.ChannelName
+import io.github.lamba92.openaqua.app.feature.device.common.SensorItem
 import io.github.lamba92.openaqua.app.feature.device.common.toPwmFanItems
 import io.github.lamba92.openaqua.app.feature.device.common.toSensorItems
 import io.github.lamba92.openaqua.app.model.DeviceStoredData
 import io.github.lamba92.openaqua.app.model.SensorTypesStoredData
+import io.github.lamba92.openaqua.app.model.VirtualSensorFeedSource
 import io.github.lamba92.openaqua.app.mvi.MVIViewModel
 import io.github.lamba92.openaqua.app.repository.AppDataRepository
 import io.github.lamba92.openaqua.app.repository.DeviceDataCacheService
 import io.github.lamba92.openaqua.app.repository.DeviceState
 import io.github.lamba92.openaqua.app.repository.resolveFeedSourceValue
 import io.github.lamba92.openaqua.model.device.DeviceId
+import io.github.lamba92.openaqua.model.device.DeviceType
 import io.github.lamba92.openaqua.model.device.FlashConfigRequest
+import io.github.lamba92.openaqua.model.device.SensorChannelKind
+import io.github.lamba92.openaqua.model.device.SensorTelemetry
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,6 +99,7 @@ class FansViewModel(
                                 sensors = sensors,
                                 hideDisconnectedFans = preferences.hideDisconnectedFans,
                                 hideDisconnectedSensors = preferences.hideDisconnectedSensors,
+                                waterSources = computeWaterSources(allDevices, sensors),
                             )
                         } else {
                             FansUiState.Ready(
@@ -102,6 +109,7 @@ class FansViewModel(
                                 fanDrafts = emptyMap(),
                                 hideDisconnectedFans = preferences.hideDisconnectedFans,
                                 hideDisconnectedSensors = preferences.hideDisconnectedSensors,
+                                waterSources = computeWaterSources(allDevices, sensors),
                             )
                         }
                     }
@@ -151,6 +159,10 @@ class FansViewModel(
                     val currentHide = (state.value as? FansUiState.Ready)?.hideDisconnectedSensors ?: false
                     logger.i { "Toggled hide disconnected sensors in fans on device '$deviceId' to ${!currentHide}" }
                     appDataRepository.setHideDisconnectedSensorsInFans(!currentHide)
+                }
+
+                is CurveStudioEvent.SelectWaterSource -> {
+                    selectWaterSource(event)
                 }
 
                 is CurveStudioEvent -> {
@@ -286,6 +298,9 @@ class FansViewModel(
                                     }
                                 }
                             }
+
+                            // Handled above by selectWaterSource
+                            is CurveStudioEvent.SelectWaterSource -> currentDraft
                         }
                     }
                 }
@@ -408,6 +423,58 @@ class FansViewModel(
                 }
             }
         }
+
+    /**
+     * Water temperatures from High Flow Next devices that can drive this device's fan curves.
+     * Fan curves can only reference this device's own sensors, so selecting one binds it to a
+     * free virtual sensor (see [selectWaterSource]). Sources already bound are listed as normal sensors.
+     */
+    private fun computeWaterSources(
+        allDevices: List<DeviceState>,
+        sensors: List<SensorItem>,
+    ): List<WaterSourceOption> {
+        if (sensors.none { it.telemetry.kind == SensorChannelKind.VIRTUAL }) return emptyList()
+        val bound = sensors.mapNotNull { it.virtualFeedSource }.toSet()
+        return allDevices
+            .filterIsInstance<DeviceState.Aqua.Ready>()
+            .filter { it.device.type == DeviceType.HIGH_FLOW_NEXT && it.device.id != deviceId }
+            .flatMap { hfn ->
+                hfn.telemetry.sensors
+                    .filterIsInstance<SensorTelemetry.Connected>()
+                    .filter { it.kind == SensorChannelKind.INTEGRATED_COOLANT }
+                    .map { WaterSourceOption(hfn.device.id, it.channel, "${hfn.device.name} Coolant", it.tempCelsius) }
+            }.filter { VirtualSensorFeedSource.Device(it.deviceId, it.channel) !in bound }
+    }
+
+    private fun selectWaterSource(event: CurveStudioEvent.SelectWaterSource) {
+        val ready = state.value as? FansUiState.Ready ?: return
+        val source = VirtualSensorFeedSource.Device(event.deviceId, event.channel)
+        val existing = ready.sensors.firstOrNull { it.virtualFeedSource == source }?.channel
+        val target =
+            existing
+                ?: ready.sensors
+                    .firstOrNull {
+                        it.telemetry.kind == SensorChannelKind.VIRTUAL &&
+                            it.virtualFeedSource == null &&
+                            it.name == ChannelName.Default
+                    }?.channel
+        if (target == null) {
+            logger.e { "No free virtual sensor on device '$deviceId' to bind water source '${event.name}'" }
+            return
+        }
+        if (existing == null) {
+            logger.i { "Binding '${event.name}' to virtual sensor $target on device '$deviceId'" }
+            appDataRepository.setSensorVirtualFeed(deviceId = deviceId, channel = target, feedSource = source)
+            appDataRepository.setSensorName(deviceId = deviceId, channel = target, name = ChannelName.Custom(event.name))
+        }
+        updateSelectedFanDraft { currentDraft, _ ->
+            when (currentDraft) {
+                is FanDraft.AutoCurve -> currentDraft.copy(sensorIndex = target)
+                is FanDraft.TargetTemp -> currentDraft.copy(sensorIndex = target)
+                else -> currentDraft
+            }
+        }
+    }
 
     private fun updateSelectedFanDraft(block: (FanDraft, channel: Int) -> FanDraft) {
         state.update { current ->
